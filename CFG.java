@@ -13,6 +13,26 @@ public class CFG {
         this.productions = productions;
     }
 
+    public void removeLambdaProductions(){
+      //TODO: Implement this method
+    }
+
+    public void removeUnitProductions(){
+        // TODO: Implement this method
+    }
+
+    public void removeUselessSymbols(){
+        // TODO: Implement this method
+    }
+
+    public void turnIntoChomskyNormalForm(){
+        // TODO: Implement this method
+    }
+
+    public void turnIntoGreibachForm(){
+        // TODO: Implement this method
+    }
+
     public String toString(){
         String result = "";
         result += "Grammar Composition: \n";
