@@ -17,6 +17,9 @@ public class RunGrammar{
         addProductions(input, productions, variableList, terminalList);
         CFG grammar1 = new CFG(startSymbol, variableList, terminalList, productions);
         System.out.println(grammar1);
+        System.out.println("Removing Lambda Productions");
+        grammar1.removeLambdaProductions();
+        System.out.println(grammar1);
         input.close();
     }
 
