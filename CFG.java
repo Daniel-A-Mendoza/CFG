@@ -151,9 +151,60 @@ public class CFG {
         return combinations.toArray(new char[0][]);
     }
     
-
+    
     public void removeUnitProductions(){
-        // TODO: Implement this method
+        // Flag to track if any changes were made in the current iteration
+        boolean changed;
+
+        // Continue iterating until no more changes are needed
+        do {
+            changed = false;
+            // Iterate over each variable in the grammar
+            // Get the current productions for the variable
+            // Create a new list to store the updated productions
+            for(char variable : variables) {
+                    String[] currentProductions = (String[]) productions.get(variable);
+                    ArrayList<String> newProductions = new ArrayList<>();
+
+                    // Iterate over each production of the variable
+                    // Check if the production is a unit production (i.e., it has only one character and that character is a variable)
+                    // if it's a unit production, replace it with non-unit productions
+                    for(String production : currentProductions) {
+                        if (production.length() == 1 && isVariable(production.charAt(0))) {
+                            char unitVariable = production.charAt(0);
+                            String[] unitProductions = (String[]) productions.get(unitVariable);
+
+                            // Iterate over each production of the unit variable
+                            // Ignore the empty production (?)
+                            // Add the non-unit production to the new list
+                            for (String unitProduction : unitProductions) {
+                                if (! unitProduction.equals("?") && unitProduction.length() > 1) {
+                                    newProductions.add(unitProduction);
+                                    changed = true;
+                                }
+                            }
+                        } else {
+                            // If it's not a unit production, add it to the new list as is
+                            newProductions.add(production);
+                        }
+                    }
+                    // Convert the new list back to an array
+                    // Update the productions for the variable
+                    String[] newProductionsArray = convertArrayListToArray(newProductions);
+                    productions.remove(variable);
+                    productions.put(variable, newProductionsArray);
+            }
+        } while (changed); // Continue until no more changes are needed
+    }
+
+    private boolean isVariable(char c) {
+        // Iterate over each variable in the grammar
+        for (char variable : variables) {
+            if (c == variable) {
+                return true;    // The character is a variable
+            }
+        }
+        return false;   // The character is not a variable
     }
 
     public void removeUselessSymbols(){
