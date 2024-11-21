@@ -250,7 +250,7 @@ public class CFG {
 
         //Remove useless variables and their productions
         for (char variable : variables) {
-            if (!reachableVariables.contains(variables) ||! productiveVariables.contains(variable)) {
+            if (!reachableVariables.contains(variable) ||! productiveVariables.contains(variable)) {
                 productions.remove(variable);    
             }
         }
@@ -362,8 +362,24 @@ public class CFG {
             for (String production : currentProductions) {
                 if (production.length() > 1) {
                     char firstChar = production.charAt(0);
+                    if (isVariable(firstChar)) {
+                        // left-recursion elimination
+                        char newVariable = (char) ('A' + variables.length);
+                        variables = combineArrays(variables, new char[] {newVariable});
+                        String[] tempProductions = new String[currentProductions.length - 1];
+                        System.arraycopy(currentProductions, 1, tempProductions, 0, currentProductions.length - 1);
+                        productions.put(newVariable, tempProductions);
+                        newProductions.add(String.valueOf(firstChar) + newVariable + production.substring(1));
+                    } else {
+                        newProductions.add(production);
+                    }
+                } else {
+                    newProductions.add(production);
                 }
             }
+            String[] newProductionsArray = convertArrayListToArray(newProductions);
+            productions.remove(variable);
+            productions.put(variable, newProductionsArray);
         }
     }
 
