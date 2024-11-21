@@ -197,26 +197,198 @@ public class CFG {
         } while (changed); // Continue until no more changes are needed
     }
 
-    private boolean isVariable(char c) {
-        // Iterate over each variable in the grammar
+    public void removeUselessSymbols(){
+        // Find all reachable variables
+        ArrayList<Character> reachableVariables = new ArrayList<>();
+        reachableVariables.add(startSymbol);
+        Boolean changed;
+        do {
+            changed = false;
+            for (char variable : variables) {
+                if (!reachableVariables.contains(variable)) {
+                    String[] currentProductions = (String[]) productions.get(variable);
+                    for (String productions : currentProductions) {
+                        boolean allReachable = true;
+                        for (char c : productions.toCharArray()) {
+                            if (isVariable(c) &&! reachableVariables.contains(c)) {
+                                allReachable = false;       break;
+                            }
+                        }
+                        if (allReachable) {
+                            reachableVariables.add(variable);
+                            changed = true;     break;
+                        }
+                    }
+                }
+            }
+        } while (changed);
+
+        // Find all Productive Values
+        ArrayList<Character> productiveVariables = new ArrayList<>();
+        do {
+            changed = false;
+            for(char variable : variables) {
+                if(!productiveVariables.contains(variable)) {
+                    String[] currentProductions = (String[]) productions.get(variable);
+                    for (String production : currentProductions) {
+                        boolean allProductive = true;
+                        for (char c : production.toCharArray()) {
+                            if (isVariable(c) &&! productiveVariables.contains(c)) {
+                                allProductive = false;      break;
+                            } else if (isTerminal(c) &&! productiveVariables.contains(variable)) {
+                                allProductive = false;      break;
+                            }
+                        }
+                        if (allProductive) {
+                            productiveVariables.add(variable);
+                            changed = true;     break;
+                        }
+                    }
+                }
+            } 
+        } while (changed);
+
+        //Remove useless variables and their productions
         for (char variable : variables) {
-            if (c == variable) {
-                return true;    // The character is a variable
+            if (!reachableVariables.contains(variables) ||! productiveVariables.contains(variable)) {
+                productions.remove(variable);    
             }
         }
-        return false;   // The character is not a variable
+
+        // Update variable array
+        char[] newVariables = convertArrayListToCharArray(reachableVariables);
+        variables = newVariables;
     }
 
-    public void removeUselessSymbols(){
-        // TODO: Implement this method
-    }
 
     public void turnIntoChomskyNormalForm(){
         // TODO: Implement this method
+        // 1. Remove Lambda and unit productions
+        removeLambdaProductions();
+        removeUnitProductions();
+
+        // 2. Replace mixed strings with non-terminals
+        HashMap<String, Character> newVariables = new HashMap<>();
+        int newVariablesIndex = 0;
+        for (char variable : variables) {
+            String[] currentProductions = (String[]) productions.get(variable);
+            ArrayList<String> newProductions = new ArrayList<>();
+
+            for (String production : currentProductions) {
+                if (production.length() > 1) {
+                    for (int i = 0; i < production.length() - 1; i++) {
+                        char c1 = production.charAt(i);
+                        char c2 = production.charAt(i + 1);
+                        if (isVariable(c1) && isTerminal(c2) || isTerminal(c1) && isVariable(c2)) {
+                            // Replace mixed Strings
+                            String key = String.valueOf(c1) + c2;
+                            if (!newVariables.containsKey(key)) {
+                                newVariables.put(key, (char) ('A' + newVariablesIndex));
+                                newVariablesIndex++;
+                            }
+                            char newVariable = newVariables.get(key);
+                            String newProduction = production.substring(0, i) + newVariable + production.substring(i + 2);
+                            newProductions.add(newProduction);
+                        } else {
+                            newProductions.add(production);
+                        }
+                    }
+                } else {
+                    newProductions.add(production);
+                }
+            }
+            String[] newProductionsArray = convertArrayListToArray(newProductions);
+            productions.remove(variable);
+            productions.put(variable, newProductionsArray);
+        }
+
+        // 3. Shorten Strings of length greater than 2
+        for (char variable : variables) {
+            String[] currentProductions = (String[]) productions.get(variable);
+            ArrayList<String> newProductions = new ArrayList<>();
+            for (String production : currentProductions) {
+                if (production.length() > 2) {
+                    char[] chars = production.toCharArray();
+                    char[] temp = new char[chars.length - 1];
+                    System.arraycopy(chars, 0, temp, 0, chars.length - 1);
+                    String tempStr = new String(temp);
+                    char newVariable = (char) ('A' + newVariablesIndex);
+                    newVariablesIndex++;
+                    newProductions.add(String.valueOf(chars[0]) + newVariable);
+                    productions.put(newVariable, new String[] {tempStr});
+                } else {
+                    newProductions.add(production);
+                }
+            }
+            String[] newProductionsArray = convertArrayListToArray(newProductions);
+            productions.remove(variable);
+            productions.put(variable, newProductionsArray);
+        }
+        // Update variables array
+        char[] newVariablesArray = convertHashMapKeysToCharArray(newVariables);
+        char[] combinedVariables = combineArrays(variables, newVariablesArray);
+        variables = combinedVariables;
     }
 
-    public void turnIntoGreibachForm(){
+    private char[] combineArrays(char[] arr1, char[] arr2) {
+        char[] result = new char[arr1.length + arr2.length];
+        System.arraycopy(arr2, 0, result, 0, arr1.length);
+        System.arraycopy(arr2, 0, result, arr1.length, arr2.length);
+        return result;
+    }
+
+    private char[] convertHashMapKeysToCharArray(HashMap<String, Character> map) {
+        char[] array = new char[map.size()];
+        int i = 0;
+        for (Character value : map.values()) {
+            array[i++] = value;
+        }
+        return array;
+    }
+
+    public void turnIntoGreibachForm() {
         // TODO: Implement this method
+        // 1. Remove lambda and unit productions.
+        removeLambdaProductions();
+        removeUnitProductions();
+
+        // 2. convert to CNF
+        turnIntoChomskyNormalForm();
+
+        // 3. Left-Recursion elimination and conversion to GNF
+        for (char variable : variables) {
+            String[] currentProductions = (String[]) productions.get(variable);
+            ArrayList<String> newProductions = new ArrayList<>();
+            for (String production : currentProductions) {
+                if (production.length() > 1) {
+                    char firstChar = production.charAt(0);
+                }
+            }
+        }
+    }
+
+    private boolean isVariable(char c) {
+        // Iterate over each variable in the grammar
+        // If The character is a variable, TRUE
+        // If The character is not a variable, FALSE
+        for (char variable : variables) {
+            if (c == variable) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isTerminal(char c) {
+        // Iterate over each terminal for the grammar
+        // If The character is a terminal, TRUE
+        // If The character is not a terminal, FALSE
+        for (char terminal : terminals) {
+            if (c == terminal) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static char[] convertArrayListToCharArray (ArrayList<Character> list){
